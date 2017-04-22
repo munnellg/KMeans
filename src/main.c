@@ -5,7 +5,7 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL.h>
 
-#define N_CLUSTERS 64
+#define N_CLUSTERS 64 
 #define N_FEATURES 3
 
 const char* DISPLAY_NAMES[] = {
@@ -305,7 +305,7 @@ void Segmenter_threshold( struct Segmenter* s ) {
         features[i*N_FEATURES+2] = (float)b;
 	}
 
-    KMeans_cluster( &s->cluster, features, s->image->w*s->image->h, 100);
+    KMeans_cluster( &s->cluster, features, s->image->w*s->image->h );
 
 	/* compute the gradient for each point on the image */
 	for( y=0; y<s->image->h; y++ ) {
