@@ -198,7 +198,7 @@ kmpp_init_centroids ( float *centroids, float *samples, int dims,
 
 
 void
-compute_cluster_sizes ( int *labels, int *counts, int n_centroids, 
+count_cluster_members ( int *labels, int *counts, int n_centroids, 
         int n_samples )
 {
     memset( counts, 0, sizeof(float)*n_centroids);
@@ -213,58 +213,60 @@ void
 recompute_centroids ( float *centroids, float *samples, int dims,
         int n_centroids, int n_samples, int *labels, int *counts )
 {
-    compute_cluster_sizes( labels, counts, n_centroids, n_samples );
+    count_cluster_members( labels, counts, n_centroids, n_samples );
 
     memset( centroids, 0, sizeof(float)*dims*n_centroids );
 
     /* sum of all samples belonging to each cluster */
-    int i;
+    int i, j;
     for( i=0; i<n_samples; i++ ) {
-        int j, l;
-        l = labels[i];
         for( j=0; j<dims; j++ ) {
-            centroids[l*dims + j] += samples[i*dims + j];
+            centroids[labels[i]*dims + j] += samples[i*dims + j];
         }
     }
 
     /* divide by number of samples in each cluster */
     for( i=0; i<n_centroids; i++ ) {
-        int j;
         for( j=0; j<dims; j++ ) {
-            centroids[i*dims + j] /= counts[i];
+            centroids[i*dims + j] /= ((counts[i])? counts[i] : 1);
         }
     }
 }		/* -----  end of function recompute_centroids  ----- */
 
+int
+reassign_clusters ( float *centroids, float *samples, int dims,
+        int n_centroids, int n_samples, int *labels )
+{
+    int i, n_changed = 0;
+    for( i=0; i<n_samples; i++ ) {
+        int l = find_closest( centroids, &samples[i*dims], dims,
+                    n_centroids, NULL );
+            
+        if( labels[i] != l ) {
+            labels[i] = l;
+            n_changed++;
+        }
+    }
+    
+    return n_changed;
+}		/* -----  end of function reassign_clusters  ----- */
 
 void
 cluster_kmeans ( float *centroids, float *samples, int dims, int n_centroids, 
         int n_samples, int *labels  )
 {
     int *counts = malloc( sizeof(int)*n_centroids );
+
     lloyd_init_centroids( centroids, samples, dims, n_centroids, n_samples );
 
-    int stable = 0;
-    int max = 100;
-    while( !stable && max > 0 ) {
+    int reassigned = n_samples;
+    while( reassigned > 0 ) {
+        reassigned = reassign_clusters( centroids, samples, dims, n_centroids,
+               n_samples, labels ) == 0; 
 
-        max--;
-        stable = 1;
-        int i;
-        for( i=0; i<n_samples; i++ ) {
-            int l = find_closest( centroids, &samples[i*dims], dims, 
-                        n_centroids, NULL );
-            if( labels[i] != l ) {
-                stable = 0;
-                labels[i] = l;
-            }
-        }
-        
         recompute_centroids( centroids, samples, dims, n_centroids, n_samples,
                 labels, counts );
     }
-
-    printf("%d iterations\n", 100-max);
 
     free(counts);
 }		/* -----  end of function cluster_kmeans  ----- */

@@ -55,11 +55,14 @@ void lloyd_init_centroids ( float *centroids, float *samples, int dims,
 void kmpp_init_centroids ( float *centroids, float *samples, int dims, 
         int n_centroids, int n_samples );
 
-void compute_cluster_sizes ( int *labels, int *counts, int n_centroids, 
+void count_cluster_members ( int *labels, int *counts, int n_centroids, 
         int n_samples );
 
 void recompute_centroids ( float *centroids, float *samples, int dims,
         int n_centroids, int n_samples, int *labels, int *counts );
+
+int reassign_clusters ( float *centroids, float *samples, int dims,
+        int n_centroids, int n_samples, int *labels );
 
 void cluster_kmeans ( float *centroids, float *samples, int dims,
         int n_centroids, int n_samples, int *labels );
