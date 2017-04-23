@@ -42,6 +42,12 @@ void KMeans_free ( KMeans *kmeans );
 
 double euclidean_distance ( double *a, double *b, int len );
 
+double silhouette ( double *points, double *sample, double *distances, 
+        int dims, int n_points );
+
+double average_silhouette ( double *points, double *samples, int n_samples, 
+        int dims, int n_points );
+
 int find_closest ( double *points, double *sample, int dims, int n_points, 
         double *dist_pointer );
 

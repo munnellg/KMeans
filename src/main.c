@@ -303,12 +303,26 @@ void Segmenter_threshold( struct Segmenter* s ) {
 	for( i=0; i<s->image->h*s->image->w; i++ ) {
         pixel = get_pixel(s->image, i%s->image->w, i/s->image->w);
         explode( s->image->format, pixel, &r, &g, &b, &a);
-        features[i*N_FEATURES] = (float)r/255;
-        features[i*N_FEATURES+1] = (float)g/255;
-        features[i*N_FEATURES+2] = (float)b/255;
+        features[i*N_FEATURES] = (float)r;
+        features[i*N_FEATURES+1] = (float)g;
+        features[i*N_FEATURES+2] = (float)b;
 	}
 
     KMeans_cluster( &s->cluster, features, s->image->w*s->image->h );
+
+    for( i=0; i<s->cluster.n_clusters; i++ ) {
+        printf("%d ", to_greyscale(s->image->format, 
+                    s->cluster.centroids[i*s->cluster.n_features],
+                    s->cluster.centroids[i*s->cluster.n_features + 1],
+                    s->cluster.centroids[i*s->cluster.n_features + 2],
+                    0
+                )
+            );
+    }
+
+    printf("%f\n", average_silhouette( s->cluster.centroids, features, 
+                s->image->w*s->image->h, s->cluster.n_features, 
+                s->cluster.n_clusters ) );
 
 	/* compute the gradient for each point on the image */
 	for( y=0; y<s->image->h; y++ ) {
@@ -317,19 +331,20 @@ void Segmenter_threshold( struct Segmenter* s ) {
             pixel = get_pixel(s->image, x, y);
             explode( s->image->format, pixel, &r, &g, &b, &a);
 
-            features[0] = (float)r/255;
-            features[1] = (float)g/255;
-            features[2] = (float)b/255;
+            features[0] = (float)r;
+            features[1] = (float)g;
+            features[2] = (float)b;
  
             int label = KMeans_classify( &s->cluster, features );
 
-            r = s->cluster.centroids[label*N_FEATURES] * 255;
-            g = s->cluster.centroids[label*N_FEATURES+1] * 255;
-            b = s->cluster.centroids[label*N_FEATURES+2] * 255;
+            r = s->cluster.centroids[label*N_FEATURES];
+            g = s->cluster.centroids[label*N_FEATURES+1];
+            b = s->cluster.centroids[label*N_FEATURES+2];
             pixel = compress( s->threshold->format, r, g, b, 255 );
             set_pixel( s->threshold, x, y, pixel );
 		}
 	}
+
     free(features);
 }
 

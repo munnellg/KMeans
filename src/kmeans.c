@@ -39,7 +39,7 @@ KMeans_cluster( KMeans *km, double *samples, int n_samples ) {
      * don't think it would be too horrible a hack */
     int *labels = malloc( sizeof(int) * n_samples );
  
-    cluster_kmpp( km->centroids, samples, km->n_features, km->n_clusters,
+    cluster_lloyd( km->centroids, samples, km->n_features, km->n_clusters,
             n_samples, labels);
 
     /* free the hack! */
@@ -64,6 +64,51 @@ KMeans_free( KMeans *km ) {
         free(km->centroids);
     }
 }
+
+
+double
+silhouette ( double *points, double *sample, double *distances, 
+        int dims, int n_points )
+{
+    double min1, min2;
+
+    compute_distances ( points, sample, distances, dims, n_points );
+
+    min1 = (distances[0]<distances[1])? distances[0] : distances[1];
+    min2 = (distances[1]<distances[0])? distances[0] : distances[1];
+
+    int i;
+    for( i=2; i<n_points; i++ ) {
+        if( distances[i] < min1 ) {
+            min2 = min1;
+            min1 = distances[i];
+        } else if (distances[i] < min2) {
+            min2 = distances[i];
+        }
+    }
+
+    return (min2-min1)/(min2);
+}		/* -----  end of function silhouette  ----- */
+
+
+double
+average_silhouette ( double *points, double *samples, int n_samples, 
+        int dims, int n_points )
+{
+    double *distances;
+    distances = malloc( sizeof(double) * n_points );
+
+    double tot = 0;
+    int i;
+    for(i=0; i<n_samples; i++) {
+        tot += silhouette( points, &samples[i*dims], distances, dims, 
+                    n_points );
+    }
+
+    free(distances);
+
+    return tot/n_samples;
+}		/* -----  end of function silhouette  ----- */
 
 double
 euclidean_distance ( double *a, double *b, int dims )
@@ -92,10 +137,15 @@ find_closest ( double *points, double *sample, int dims, int n_points,
         return -1;
     }
 
-    /* initialize with the assumption that the first point is the closest */
-    int closest = 0;
+    /* We do a little configuration here. If the calling function did not pass 
+     * a dist_pointer value, then we'll use our dummy_dist value to store the 
+     * minimum distance. So we can either report on distance to the closest
+     * point or not depending on what the calling function wants */
     double dummy_dist;
     double *distance = (dist_pointer)? dist_pointer : &dummy_dist;
+
+    /* initialize with the assumption that the first point is the closest. */ 
+    int closest = 0;
     *distance = euclidean_distance( points, sample, dims );
 
     /* now check all other points */ 
@@ -171,6 +221,11 @@ kmpp_init_centroids ( double *centroids, double *samples, int dims,
             find_closest( centroids, &samples[j*dims], dims, i, &d );
             dist += d*d;
         }
+
+        /* choose a new centroid from the set of sample points with a 
+         * probability that is proportaional to their square distance from
+         * the nearest cluster. We preferably want to choose points that
+         * are far away from any other cluster */
         double p = rand()%(int)dist;
         for( j=0; j<n_samples; j++ ) {
             double d = 0;
@@ -277,6 +332,5 @@ cluster_kmpp ( double *centroids, double *samples, int dims,
         int n_centroids, int n_samples, int *labels  )
 {
     kmpp_init_centroids( centroids, samples, dims, n_centroids, n_samples );
-    
     cluster_kmeans( centroids, samples, dims, n_centroids, n_samples, labels );
 }		/* -----  end of function cluster_kmpp  ----- */
