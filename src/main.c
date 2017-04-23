@@ -287,9 +287,9 @@ struct Segmenter* Segmenter_create( void ) {
 void Segmenter_threshold( struct Segmenter* s ) {
     int i, x, y;
 	Uint32 pixel, r,g,b,a;
-	float* features;
+	double* features;
 
-	features = malloc( sizeof(float) * s->image->w * s->image->h * N_FEATURES );
+	features = malloc( sizeof(double) * s->image->w * s->image->h * N_FEATURES );
 
 	if(!features) {
 		printf("Unable to allocate memory for computing features!\n");
@@ -303,9 +303,9 @@ void Segmenter_threshold( struct Segmenter* s ) {
 	for( i=0; i<s->image->h*s->image->w; i++ ) {
         pixel = get_pixel(s->image, i%s->image->w, i/s->image->w);
         explode( s->image->format, pixel, &r, &g, &b, &a);
-        features[i*N_FEATURES] = (float)r;
-        features[i*N_FEATURES+1] = (float)g;
-        features[i*N_FEATURES+2] = (float)b;
+        features[i*N_FEATURES] = (float)r/255;
+        features[i*N_FEATURES+1] = (float)g/255;
+        features[i*N_FEATURES+2] = (float)b/255;
 	}
 
     KMeans_cluster( &s->cluster, features, s->image->w*s->image->h );
@@ -316,15 +316,16 @@ void Segmenter_threshold( struct Segmenter* s ) {
             
             pixel = get_pixel(s->image, x, y);
             explode( s->image->format, pixel, &r, &g, &b, &a);
-            features[0] = (float)r;
-            features[1] = (float)g;
-            features[2] = (float)b;
+
+            features[0] = (float)r/255;
+            features[1] = (float)g/255;
+            features[2] = (float)b/255;
  
             int label = KMeans_classify( &s->cluster, features );
 
-            r = s->cluster.centroids[label*N_FEATURES];
-            g = s->cluster.centroids[label*N_FEATURES+1];
-            b = s->cluster.centroids[label*N_FEATURES+2];
+            r = s->cluster.centroids[label*N_FEATURES] * 255;
+            g = s->cluster.centroids[label*N_FEATURES+1] * 255;
+            b = s->cluster.centroids[label*N_FEATURES+2] * 255;
             pixel = compress( s->threshold->format, r, g, b, 255 );
             set_pixel( s->threshold, x, y, pixel );
 		}

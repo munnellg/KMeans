@@ -26,12 +26,12 @@ KMeans_init( KMeans *km, int n_clusters, int n_features ) {
          * to make it easier to allocate and release memory. */ 
         km->n_clusters = n_clusters;
         km->n_features = n_features;
-        km->centroids = malloc(sizeof(float)*n_clusters*n_features);
+        km->centroids = malloc(sizeof(double)*n_clusters*n_features);
     }
 }
 
 void
-KMeans_cluster( KMeans *km, float *samples, int n_samples ) {
+KMeans_cluster( KMeans *km, double *samples, int n_samples ) {
     
     /* not happy about the malloc here, but hey. Maybe get the user to pass a 
      * labels array? So we won't just train the classifier, we'll tell you 
@@ -39,7 +39,7 @@ KMeans_cluster( KMeans *km, float *samples, int n_samples ) {
      * don't think it would be too horrible a hack */
     int *labels = malloc( sizeof(int) * n_samples );
  
-    cluster_lloyd( km->centroids, samples, km->n_features, km->n_clusters,
+    cluster_kmpp( km->centroids, samples, km->n_features, km->n_clusters,
             n_samples, labels);
 
     /* free the hack! */
@@ -47,7 +47,7 @@ KMeans_cluster( KMeans *km, float *samples, int n_samples ) {
 }
 
 int
-KMeans_classify( KMeans *km, float *sample ) {
+KMeans_classify( KMeans *km, double *sample ) {
     
     /* return the assignment for this sample */
     return find_closest( km->centroids, sample, km->n_features, km->n_clusters, 
@@ -64,8 +64,9 @@ KMeans_free( KMeans *km ) {
         free(km->centroids);
     }
 }
-float
-euclidean_distance ( float *a, float *b, int dims )
+
+double
+euclidean_distance ( double *a, double *b, int dims )
 {
     /* test for NULL pointers and return -1 in the event of invalid input */
     if(!a || !b) {
@@ -73,7 +74,7 @@ euclidean_distance ( float *a, float *b, int dims )
     }
 
     int i;
-    float sum = 0;
+    double sum = 0;
     for( i=0; i<dims; i++ ) {
         sum += (a[i]-b[i])*(a[i]-b[i]);
     }
@@ -83,8 +84,8 @@ euclidean_distance ( float *a, float *b, int dims )
 
 
 int
-find_closest ( float *points, float *sample, int dims, int n_points, 
-        float *dist_pointer )
+find_closest ( double *points, double *sample, int dims, int n_points, 
+        double *dist_pointer )
 {
     /* do some error checking just to be safe */
     if(!points || !sample || dims < 1 || n_points < 1 ) {
@@ -93,14 +94,15 @@ find_closest ( float *points, float *sample, int dims, int n_points,
 
     /* initialize with the assumption that the first point is the closest */
     int closest = 0;
-    float dummy_dist;
-    float *distance = (dist_pointer)? dist_pointer : &dummy_dist;
+    double dummy_dist;
+    double *distance = (dist_pointer)? dist_pointer : &dummy_dist;
     *distance = euclidean_distance( points, sample, dims );
+
     /* now check all other points */ 
     int i;
     for( i=1; i<n_points; i++ ) {
 
-        float d = euclidean_distance( &points[i*dims], sample, dims );
+        double d = euclidean_distance( &points[i*dims], sample, dims );
         
         /* if we find a point that is closer, update our minimum distance and 
          * the id of the closest point */
@@ -115,8 +117,8 @@ find_closest ( float *points, float *sample, int dims, int n_points,
 
 
 void
-compute_distances ( float *points, float *sample, float *distances, int dims,
-        int n_points )
+compute_distances ( double *points, double *sample, double *distances, 
+        int dims, int n_points )
 {
     /* simple error checking */
     if( !points || !sample || !distances || dims < 1 || n_points < 1 ) {
@@ -132,7 +134,7 @@ compute_distances ( float *points, float *sample, float *distances, int dims,
 
 
 void
-lloyd_init_centroids ( float *centroids, float *samples, int dims, 
+lloyd_init_centroids ( double *centroids, double *samples, int dims, 
         int n_centroids, int n_samples )
 {
     /* error checking stuff */
@@ -144,55 +146,41 @@ lloyd_init_centroids ( float *centroids, float *samples, int dims,
     int i;
     for( i=0; i<n_centroids; i++ ) {
         int s = rand()%n_samples;
-        memcpy( &centroids[i*dims], &samples[s*dims], sizeof(float) * dims ); 
+        memcpy( &centroids[i*dims], &samples[s*dims], sizeof(double) * dims ); 
     }
 }		/* -----  end of function lloyd_init_centroids  ----- */
 
 
 void
-kmpp_init_centroids ( float *centroids, float *samples, int dims, 
+kmpp_init_centroids ( double *centroids, double *samples, int dims, 
         int n_centroids, int n_samples )
 {
+    /* start by choosing a random initial point */
     int s = rand()%n_samples;
-    memcpy ( centroids, &samples[s*dims], sizeof(float) * dims );
-    int x;
-    printf("Choosing %d: ( %5.2f", s, samples[s*dims] );
-    for( x=1; x<dims; x++ ) {
-        printf(", %5.2f", samples[s*dims + x] );
-    }
-    printf(" )\n");
+    memcpy ( centroids, &samples[s*dims], sizeof(double) * dims );
 
     int i;
     for( i=1; i<n_centroids; i++ ) {
-        float dist = 0;
+        double dist = 0;
         
         /* compute cumulative square distance between each sample point and its
          * closest centroid of those we've selected thus far */
         int j;
         for( j=0; j<n_samples; j++ ) {
-            float d = 0;
+            double d = 0;
             find_closest( centroids, &samples[j*dims], dims, i, &d );
             dist += d*d;
-            printf("%f %f\n", d, dist);
         }
-        
-        printf("%5.2f\n", dist);
-        float p = rand()*dist;
+        double p = rand()%(int)dist;
         for( j=0; j<n_samples; j++ ) {
-            float d = 0;
+            double d = 0;
             find_closest( centroids, &samples[j*dims], dims, i, &d );
-            p -= d*d;
+            p -= (d*d);
             if( p<= 0 ) {
                 break;
             }
         }
-        
-        printf("Choosing %d: ( %5.2f", j, samples[j*dims] );
-        for( x=1; x<dims; x++ ) {
-            printf(", %5.2f", samples[j*dims + x] );
-        }
-        printf(" )\n");
-        memcpy( &centroids[i*dims], &samples[j*dims], sizeof(float) * dims);
+        memcpy( &centroids[i*dims], &samples[j*dims], sizeof(double) * dims);
     }
 }		/* -----  end of function kmpp_init_centroids  ----- */
 
@@ -201,7 +189,7 @@ void
 count_cluster_members ( int *labels, int *counts, int n_centroids, 
         int n_samples )
 {
-    memset( counts, 0, sizeof(float)*n_centroids);
+    memset( counts, 0, sizeof(int)*n_centroids);
     int i;
     for( i=0; i<n_samples; i++ ) {
         counts[labels[i]]++;
@@ -210,12 +198,10 @@ count_cluster_members ( int *labels, int *counts, int n_centroids,
 
 
 void
-recompute_centroids ( float *centroids, float *samples, int dims,
+recompute_centroids ( double *centroids, double *samples, int dims,
         int n_centroids, int n_samples, int *labels, int *counts )
 {
-    count_cluster_members( labels, counts, n_centroids, n_samples );
-
-    memset( centroids, 0, sizeof(float)*dims*n_centroids );
+    memset( centroids, 0, sizeof(double)*dims*n_centroids );
 
     /* sum of all samples belonging to each cluster */
     int i, j;
@@ -234,8 +220,8 @@ recompute_centroids ( float *centroids, float *samples, int dims,
 }		/* -----  end of function recompute_centroids  ----- */
 
 int
-reassign_clusters ( float *centroids, float *samples, int dims,
-        int n_centroids, int n_samples, int *labels )
+reassign_clusters ( double *centroids, double *samples, int dims,
+        int n_centroids, int n_samples, int *labels, int *counts )
 {
     int i, n_changed = 0;
     for( i=0; i<n_samples; i++ ) {
@@ -243,6 +229,9 @@ reassign_clusters ( float *centroids, float *samples, int dims,
                     n_centroids, NULL );
             
         if( labels[i] != l ) {
+            counts[labels[i]]--;
+            counts[l]++;
+
             labels[i] = l;
             n_changed++;
         }
@@ -252,15 +241,19 @@ reassign_clusters ( float *centroids, float *samples, int dims,
 }		/* -----  end of function reassign_clusters  ----- */
 
 void
-cluster_kmeans ( float *centroids, float *samples, int dims, int n_centroids, 
+cluster_kmeans ( double *centroids, double *samples, int dims, int n_centroids, 
         int n_samples, int *labels  )
 {
+
     int *counts = malloc( sizeof(int)*n_centroids );
+    memset( labels, 0, sizeof(int) * n_samples );
+    memset( counts, 0, sizeof(int) * n_centroids );
+    counts[0] = n_samples;
 
     int reassigned = n_samples;
     while( reassigned > 0 ) {
         reassigned = reassign_clusters( centroids, samples, dims, n_centroids,
-               n_samples, labels ) == 0; 
+               n_samples, labels, counts ) == 0; 
 
         recompute_centroids( centroids, samples, dims, n_centroids, n_samples,
                 labels, counts );
@@ -271,7 +264,7 @@ cluster_kmeans ( float *centroids, float *samples, int dims, int n_centroids,
 
 
 void
-cluster_lloyd ( float *centroids, float *samples, int dims,
+cluster_lloyd ( double *centroids, double *samples, int dims,
         int n_centroids, int n_samples, int *labels  )
 {
     lloyd_init_centroids( centroids, samples, dims, n_centroids, n_samples );
@@ -280,9 +273,10 @@ cluster_lloyd ( float *centroids, float *samples, int dims,
 
 
 void
-cluster_kmpp ( float *centroids, float *samples, int dims,
+cluster_kmpp ( double *centroids, double *samples, int dims,
         int n_centroids, int n_samples, int *labels  )
 {
     kmpp_init_centroids( centroids, samples, dims, n_centroids, n_samples );
+    
     cluster_kmeans( centroids, samples, dims, n_centroids, n_samples, labels );
 }		/* -----  end of function cluster_kmpp  ----- */

@@ -4,7 +4,7 @@ CC = gcc
 
 LINKER_FLAGS = -lm -lSDL2 -lSDL2_image
 
-COMPILER_FLAGS = -Wall
+COMPILER_FLAGS = -Wall -g
 
 OBJ = kmeans
 
