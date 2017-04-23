@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL.h>
 
-#define N_CLUSTERS 64 
+#define N_CLUSTERS 2
 #define N_FEATURES 3
 
 const char* DISPLAY_NAMES[] = {
@@ -70,8 +71,10 @@ int main( int argc, char *argv[] ) {
 
 	char* filename = argv[1];
 	struct ImageProcessor* ip = ImageProcessor_create( );
-
-	ImageProcessor_load(ip, filename);
+    
+    srand(time(NULL));
+	
+    ImageProcessor_load(ip, filename);
 	ImageProcessor_detect(ip);
 	ImageProcessor_update_title ( ip );
 	ImageProcessor_show(ip);

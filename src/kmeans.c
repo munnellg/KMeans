@@ -32,14 +32,14 @@ KMeans_init( KMeans *km, int n_clusters, int n_features ) {
 
 void
 KMeans_cluster( KMeans *km, float *samples, int n_samples ) {
-    srand(time(NULL));
+    
     /* not happy about the malloc here, but hey. Maybe get the user to pass a 
      * labels array? So we won't just train the classifier, we'll tell you 
      * where all your sample data was clustered? scikit-learn does this, so I 
      * don't think it would be too horrible a hack */
     int *labels = malloc( sizeof(int) * n_samples );
  
-    cluster_kmeans( km->centroids, samples, km->n_features, km->n_clusters,
+    cluster_lloyd( km->centroids, samples, km->n_features, km->n_clusters,
             n_samples, labels);
 
     /* free the hack! */
@@ -257,8 +257,6 @@ cluster_kmeans ( float *centroids, float *samples, int dims, int n_centroids,
 {
     int *counts = malloc( sizeof(int)*n_centroids );
 
-    lloyd_init_centroids( centroids, samples, dims, n_centroids, n_samples );
-
     int reassigned = n_samples;
     while( reassigned > 0 ) {
         reassigned = reassign_clusters( centroids, samples, dims, n_centroids,
@@ -270,3 +268,21 @@ cluster_kmeans ( float *centroids, float *samples, int dims, int n_centroids,
 
     free(counts);
 }		/* -----  end of function cluster_kmeans  ----- */
+
+
+void
+cluster_lloyd ( float *centroids, float *samples, int dims,
+        int n_centroids, int n_samples, int *labels  )
+{
+    lloyd_init_centroids( centroids, samples, dims, n_centroids, n_samples );
+    cluster_kmeans( centroids, samples, dims, n_centroids, n_samples, labels );
+}		/* -----  end of function cluster_lloyd  ----- */
+
+
+void
+cluster_kmpp ( float *centroids, float *samples, int dims,
+        int n_centroids, int n_samples, int *labels  )
+{
+    kmpp_init_centroids( centroids, samples, dims, n_centroids, n_samples );
+    cluster_kmeans( centroids, samples, dims, n_centroids, n_samples, labels );
+}		/* -----  end of function cluster_kmpp  ----- */

@@ -22,7 +22,6 @@
 #include	<math.h>
 #include	<stdlib.h>
 #include	<string.h>
-#include	<time.h>
 
 /* A K-means model. Can be trained and then used for classification */
 typedef struct KMeans {
@@ -65,6 +64,12 @@ int reassign_clusters ( float *centroids, float *samples, int dims,
         int n_centroids, int n_samples, int *labels );
 
 void cluster_kmeans ( float *centroids, float *samples, int dims,
+        int n_centroids, int n_samples, int *labels );
+
+void cluster_lloyd ( float *centroids, float *samples, int dims,
+        int n_centroids, int n_samples, int *labels );
+
+void cluster_kmpp ( float *centroids, float *samples, int dims,
         int n_centroids, int n_samples, int *labels );
 
 #endif   /* ----- #ifndef KMEANS_INC  ----- */
